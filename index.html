@@ -2461,40 +2461,61 @@ function parseB3CSV(text) {
 
 function parseB3Rows(rows) {
   const found = [];
-  // Mapeamento flexível de colunas — B3 pode variar o layout
-  const colMap = {};
 
-  // Procura linha de cabeçalho
+  const parseNum = (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    return parseFloat(String(val).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')) || 0;
+  };
+
+  // ── Layout padrão B3 (colunas fixas) ──────────────────────────
+  // Coluna A(0)=Entrada/Saída, B(1)=Data, C(2)=Movimentação,
+  // D(3)=Produto, E(4)=Instituição, F(5)=Quantidade, G(6)=Preço,
+  // H(7)=Valor da Operação
+  // PM por operação = Coluna H ÷ Coluna F
+  // Também tenta detectar cabeçalho dinâmico como fallback
+
+  let colTicker = -1, colQty = -1, colValor = -1, colPreco = -1;
   let headerRow = -1;
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+
+  // 1. Tenta encontrar linha de cabeçalho
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
     const row = rows[i].map(c => String(c).toLowerCase().trim());
-    const hasProduct = row.some(c => c.includes('produto') || c.includes('ativo') || c.includes('fundo') || c.includes('ticker') || c.includes('código'));
-    const hasQty = row.some(c => c.includes('quant') || c.includes('cotas') || c.includes('posição'));
-    if (hasProduct && hasQty) {
+    const hasTicker = row.some(c => c.includes('produto') || c.includes('ativo') || c.includes('código') || c.includes('ticker'));
+    const hasQty    = row.some(c => c.includes('quant'));
+    if (hasTicker && hasQty) {
       headerRow = i;
       row.forEach((cell, idx) => {
-        if (cell.includes('produto') || cell.includes('ativo') || cell.includes('ticker') || cell.includes('código')) colMap.ticker = idx;
-        if (cell.includes('quant') || cell.includes('cotas') || cell.includes('posição')) colMap.cotas = idx;
-        if (cell.includes('preço médio') || cell.includes('preco medio') || cell.includes('custo médio') || cell.includes('pm')) colMap.pm = idx;
-        if (cell.includes('preço atual') || cell.includes('cotação') || cell.includes('valor atual') || cell.includes('último preço')) colMap.atual = idx;
-        if (cell.includes('valor') && !colMap.pm) colMap.pm = idx;
+        if (cell.includes('produto') || cell.includes('ativo') || cell.includes('código') || cell.includes('ticker')) colTicker = idx;
+        if (cell.includes('quant')) colQty = idx;
+        // Coluna de valor total da operação (H)
+        if (cell.includes('valor') && (cell.includes('oper') || cell.includes('total') || cell.includes('financ'))) colValor = idx;
+        // Coluna de preço unitário (G) — fallback se não tiver colValor
+        if ((cell.includes('preço') || cell.includes('preco')) && !cell.includes('médio') && !cell.includes('medio')) colPreco = idx;
+        // Preço médio direto
+        if (cell.includes('médio') || cell.includes('medio')) colPreco = idx;
       });
       break;
     }
   }
 
-  // Fallback: assume colunas padrão B3 se não achou header
-  if (headerRow === -1) {
-    // Tenta detectar pelo padrão de ticker na coluna
+  // 2. Fallback: B3 padrão — detecta pela posição do ticker
+  if (headerRow === -1 || colTicker === -1) {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       for (let j = 0; j < row.length; j++) {
-        if (/^[A-Z]{4}[0-9]{2}B?$/.test(String(row[j]).trim().toUpperCase())) {
-          // Encontrou ticker — usa este como referência
-          if (!colMap.ticker) colMap.ticker = j;
-          if (colMap.cotas === undefined) colMap.cotas = j + 1;
-          if (colMap.pm === undefined) colMap.pm = j + 3;
-          if (colMap.atual === undefined) colMap.atual = j + 4;
+        const val = String(row[j]).trim().toUpperCase();
+        if (/^[A-Z]{4}[0-9]{2}B?$/.test(val)) {
+          colTicker = j;
+          // B3 padrão: ticker na col D(3), qty na F(5), valor na H(7)
+          if (j === 3) {
+            colQty   = 5;  // coluna F
+            colValor = 7;  // coluna H
+            colPreco = 6;  // coluna G (preço unitário)
+          } else {
+            colQty   = j + 2;
+            colValor = j + 4;
+            colPreco = j + 3;
+          }
           headerRow = i - 1;
           break;
         }
@@ -2509,44 +2530,43 @@ function parseB3Rows(rows) {
     const row = rows[i];
     if (!row || row.length < 2) continue;
 
-    // Tenta extrair ticker de qualquer coluna
+    // Extrai ticker
     let ticker = null;
-    for (let j = 0; j < row.length; j++) {
-      const val = String(row[j]).trim().toUpperCase();
-      if (/^[A-Z]{4}[0-9]{2}B?$/.test(val)) { ticker = val; if (!colMap.ticker) colMap.ticker = j; break; }
-      // Ticker pode estar junto com nome: "HGLG11 - CGHG LOGÍSTICA"
+    const colsToCheck = colTicker >= 0 ? [colTicker] : [...Array(Math.min(row.length, 8)).keys()];
+    for (const j of colsToCheck) {
+      const val = String(row[j] || '').trim().toUpperCase();
+      if (/^[A-Z]{4}[0-9]{2}B?$/.test(val)) { ticker = val; break; }
       const m = val.match(/([A-Z]{4}[0-9]{2}B?)/);
-      if (m) { ticker = m[1]; if (!colMap.ticker) colMap.ticker = j; break; }
+      if (m) { ticker = m[1]; break; }
     }
-
     if (!ticker) continue;
-    // Filtra apenas FIIs (termina em 11, 12, etc — exclui ações comuns)
-    // FIIs geralmente têm F no início ou terminam em 11
-    // Aceita qualquer ticker 4L+2D encontrado no contexto de FII
 
-    const parseNum = (val) => {
-      if (val === undefined || val === null || val === '') return 0;
-      return parseFloat(String(val).replace(/[R$\s]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')) || 0;
-    };
-
-    const cotas = parseNum(colMap.cotas !== undefined ? row[colMap.cotas] : row[(colMap.ticker||0) + 1]);
-    const pm = parseNum(colMap.pm !== undefined ? row[colMap.pm] : 0);
-    const atual = parseNum(colMap.atual !== undefined ? row[colMap.atual] : pm);
+    const cotas      = parseNum(colQty   >= 0 ? row[colQty]   : 0);
+    const valorTotal = parseNum(colValor  >= 0 ? row[colValor] : 0);
+    const precoUnit  = parseNum(colPreco  >= 0 ? row[colPreco] : 0);
 
     if (cotas <= 0) continue;
 
-    found.push({ ticker, cotas, pm: pm || 0, dividendo: 0, setor: 'Híbrido' });
+    // PM = Valor total da operação (col H) ÷ Quantidade (col F)
+    // Fallback: usa preço unitário direto se não tiver valor total
+    let pm = 0;
+    if (valorTotal > 0 && cotas > 0) {
+      pm = parseFloat((valorTotal / cotas).toFixed(4));
+    } else if (precoUnit > 0) {
+      pm = precoUnit;
+    }
+
+    found.push({ ticker, cotas, pm, dividendo: 0, setor: 'Híbrido' });
   }
 
-  // Agrupa por ticker e calcula preço médio ponderado
-  // PM ponderado = Σ(cotas_i × pm_i) / Σ(cotas_i)
+  // Agrupa por ticker — PM ponderado = Σ(valor_i) / Σ(cotas_i)
   const agrupado = {};
   found.forEach(f => {
     if (!agrupado[f.ticker]) {
-      agrupado[f.ticker] = { ticker: f.ticker, cotas: 0, totalInvestido: 0, dividendo: 0, setor: f.setor };
+      agrupado[f.ticker] = { ticker: f.ticker, cotas: 0, totalInvestido: 0, setor: f.setor };
     }
-    agrupado[f.ticker].cotas += f.cotas;
-    agrupado[f.ticker].totalInvestido += f.cotas * (f.pm || 0);
+    agrupado[f.ticker].cotas         += f.cotas;
+    agrupado[f.ticker].totalInvestido += f.cotas * f.pm;
   });
 
   return Object.values(agrupado).map(f => {
