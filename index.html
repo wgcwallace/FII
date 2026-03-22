@@ -78,15 +78,24 @@
     z-index: 1;
   }
 
-  /* TOPBAR */
+  /* TOPBAR — duas linhas fixas */
   .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     display: flex;
-    align-items: center;
-    gap: 0;
+    flex-direction: column;
     flex-shrink: 0;
     z-index: 10;
+    position: sticky;
+    top: 0;
+  }
+
+  /* Linha 1: logo + stats + atualizar */
+  .topbar-row1 {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    border-bottom: 1px solid var(--border);
   }
 
   .logo {
@@ -95,34 +104,42 @@
     font-size: 15px;
     color: var(--accent);
     letter-spacing: 2px;
-    padding: 0 20px;
+    padding: 0 16px;
     border-right: 1px solid var(--border);
-    height: 56px;
+    height: 48px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
   }
 
-  .nav-tabs {
+  .topbar-actions {
     display: flex;
     align-items: center;
-    height: 56px;
-    gap: 2px;
-    padding: 0 8px;
+    gap: 16px;
+    padding: 0 16px;
     flex: 1;
   }
 
+  /* Linha 2: botões de navegação */
+  .nav-tabs {
+    display: flex;
+    align-items: center;
+    height: 42px;
+    gap: 2px;
+    padding: 0 8px;
+  }
+
   .nav-btn {
-    height: 40px;
-    padding: 0 16px;
-    border-radius: 8px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 7px;
     border: none;
     background: transparent;
     color: var(--text3);
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     font-size: 13px;
     font-family: 'DM Sans', sans-serif;
     font-weight: 500;
@@ -130,7 +147,7 @@
     white-space: nowrap;
     position: relative;
   }
-  .nav-btn .nav-icon { font-size: 16px; }
+  .nav-btn .nav-icon { font-size: 15px; }
   .nav-btn .nav-label { font-size: 13px; }
 
   .nav-btn:hover { background: var(--accent-dim); color: var(--accent); }
@@ -142,25 +159,13 @@
   .nav-btn.active::after {
     content: '';
     position: absolute;
-    bottom: -9px;
+    bottom: -5px;
     left: 50%;
     transform: translateX(-50%);
-    width: 32px;
+    width: 28px;
     height: 2px;
     background: var(--accent);
     border-radius: 2px 2px 0 0;
-  }
-
-  /* TOPBAR RIGHT ACTIONS */
-  .topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-    border-left: 1px solid var(--border);
-    height: 56px;
-    flex-shrink: 0;
-    margin-left: auto;
   }
 
   /* MAIN */
@@ -1005,7 +1010,36 @@
 <div class="app">
   <!-- TOPBAR -->
   <nav class="topbar">
-    <div class="logo">FII</div>
+    <!-- Linha 1: logo + stats + atualizar -->
+    <div class="topbar-row1">
+      <div class="logo">FII</div>
+      <div class="topbar-actions">
+        <div class="header-stats">
+          <div class="hstat">
+            <div class="hstat-label">Patrimônio</div>
+            <div class="hstat-value" id="h-patrimonio">R$ 0,00</div>
+          </div>
+          <div class="hstat">
+            <div class="hstat-label">Renda/mês</div>
+            <div class="hstat-value" id="h-renda">R$ 0,00</div>
+          </div>
+          <div class="hstat">
+            <div class="hstat-label">Yield médio</div>
+            <div class="hstat-value" id="h-yield">0,00%</div>
+          </div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <div>
+            <button class="update-btn" id="btn-update-cotacoes" onclick="atualizarCotacoes()">
+              <span class="upd-icon">🔄</span>
+              <span id="upd-label">Atualizar</span>
+            </button>
+            <div class="upd-time" id="upd-time" style="text-align:right;margin-top:2px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Linha 2: navegação -->
     <div class="nav-tabs">
       <button class="nav-btn active" onclick="showPage('dashboard')">
         <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
@@ -1019,30 +1053,6 @@
       <button class="nav-btn" onclick="showPage('chat')">
         <span class="nav-icon">💬</span><span class="nav-label">Assistente</span>
       </button>
-    </div>
-    <div class="topbar-actions">
-      <div class="header-stats">
-        <div class="hstat">
-          <div class="hstat-label">Patrimônio</div>
-          <div class="hstat-value" id="h-patrimonio">R$ 0,00</div>
-        </div>
-        <div class="hstat">
-          <div class="hstat-label">Renda/mês</div>
-          <div class="hstat-value" id="h-renda">R$ 0,00</div>
-        </div>
-        <div class="hstat">
-          <div class="hstat-label">Yield médio</div>
-          <div class="hstat-value" id="h-yield">0,00%</div>
-        </div>
-      </div>
-      <div style="width:1px;height:32px;background:var(--border);margin:0 4px"></div>
-      <div>
-        <button class="update-btn" id="btn-update-cotacoes" onclick="atualizarCotacoes()">
-          <span class="upd-icon">🔄</span>
-          <span id="upd-label">Atualizar</span>
-        </button>
-        <div class="upd-time" id="upd-time" style="text-align:right;margin-top:2px"></div>
-      </div>
     </div>
   </nav>
 
