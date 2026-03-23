@@ -3520,10 +3520,7 @@ async function buscarDividendosBrapi() {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Busque o último dividendo pago (valor por cota em R$) de cada um destes FIIs brasileiros: ${tickersStr}.
-Retorne SOMENTE um JSON válido, sem texto adicional, no formato:
-{"TICKER1": 0.00, "TICKER2": 0.00}
-Use o valor mais recente disponível. Se não encontrar, use 0.`
+          content: `Busque o último dividendo pago (valor por cota em R$) de cada um destes FIIs brasileiros: ${tickersStr}. Retorne SOMENTE um JSON no formato TICKER:valor ex: HGLG11:1.10,MXRF11:0.13 sem chaves sem aspas sem texto extra. Se não encontrar use 0.`
         }]
       })
     });
@@ -3531,12 +3528,15 @@ Use o valor mais recente disponível. Se não encontrar, use 0.`
     const data = await response.json();
     const text = data.content?.map(b => b.text || '').join('') || '';
 
-    // Extrai JSON da resposta
-    const jsonMatch = text.match(/\{[^{}]+\}/s);
-    if (jsonMatch) {
-      const divMap = JSON.parse(jsonMatch[0]);
-      const hoje = new Date().toISOString().slice(0, 10);
-
+    // Extrai pares TICKER:valor da resposta
+    const hoje = new Date().toISOString().slice(0, 10);
+    const divMap = {};
+    const pairs = text.match(/([A-Z]{4}[0-9]{2}B?)\s*[:\s]\s*([\d]+[.,][\d]+)/g) || [];
+    pairs.forEach(p => {
+      const m = p.match(/([A-Z]{4}[0-9]{2}B?)\s*[:\s]\s*([\d]+[.,][\d]+)/);
+      if (m) divMap[m[1]] = parseFloat(m[2].replace(',', '.'));
+    });
+    if (Object.keys(divMap).length > 0) {
       fiis.forEach(fii => {
         const ticker = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
         const val = divMap[ticker] || divMap[fii.ticker];
@@ -3554,7 +3554,7 @@ Use o valor mais recente disponível. Se não encontrar, use 0.`
         }
       });
     } else {
-      throw new Error('JSON não encontrado na resposta');
+      throw new Error('Nenhum dado encontrado na resposta');
     }
   } catch(e) {
     console.error('Erro ao buscar dividendos:', e);
