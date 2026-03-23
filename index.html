@@ -3150,6 +3150,41 @@ function atualizarCotacoes() {
   buscarCotacoesBrapi();
 }
 
+async function testarToken() {
+  const token = document.getElementById('brapi-token-input').value.trim();
+  const result = document.getElementById('token-test-result');
+  result.style.display = 'block';
+  result.style.color = 'var(--text3)';
+  result.textContent = '⏳ Testando token...';
+
+  if (!token) {
+    result.style.color = 'var(--red)';
+    result.textContent = '❌ Cole o token antes de testar.';
+    return;
+  }
+
+  try {
+    // Testa com HGLG11 como ticker de referência
+    const url = `https://brapi.dev/api/quote/HGLG11?token=${token}&fundamental=false`;
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json();
+
+    if (res.status === 401 || res.status === 403 || data.error) {
+      result.style.color = 'var(--red)';
+      result.textContent = `❌ Token inválido (${res.status}): ${data.message || 'Verifique o token no painel da Brapi'}`;
+    } else if (data.results?.[0]?.regularMarketPrice) {
+      result.style.color = 'var(--accent)';
+      result.textContent = `✅ Token válido! HGLG11 = R$ ${data.results[0].regularMarketPrice.toFixed(2)}`;
+    } else {
+      result.style.color = 'var(--gold)';
+      result.textContent = '⚠️ Resposta inesperada da API. Tente salvar mesmo assim.';
+    }
+  } catch (err) {
+    result.style.color = 'var(--red)';
+    result.textContent = `❌ Erro de rede: ${err.message}`;
+  }
+}
+
 function salvarTokenBrapi() {
   const token = document.getElementById('brapi-token-input').value.trim();
   if (!token) { notify('Cole o token antes de salvar.', true); return; }
@@ -3561,8 +3596,10 @@ if (isIOS && !isStandalone) {
       <input type="password" id="brapi-token-input" placeholder="Cole seu token aqui..." style="font-family:'DM Mono',monospace">
       <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace">🔒 Token salvo apenas no seu dispositivo</div>
     </div>
+    <div id="token-test-result" style="margin-bottom:12px;font-size:12px;font-family:'DM Mono',monospace;display:none"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="btn" onclick="document.getElementById('modal-token').classList.remove('open')">Cancelar</button>
+      <button class="btn" onclick="testarToken()" style="color:var(--blue);border-color:var(--blue)">🧪 Testar token</button>
       <button class="btn btn-primary" onclick="salvarTokenBrapi()">✅ Salvar e atualizar</button>
     </div>
   </div>
