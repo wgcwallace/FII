@@ -3519,8 +3519,8 @@ async function buscarDividendosBrapi() {
 
     for (const sym of tentativas) {
       try {
-        // Usa fundamental=true para obter lastDividendValue e lastDividendDate
-        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=true`;
+        // modules=defaultKeyStatistics retorna lastDividendValue e lastDividendDate
+        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&modules=defaultKeyStatistics`;
         const res = await fetch(url, { method: 'GET' });
         if (!res.ok) continue;
         const data = await res.json();
