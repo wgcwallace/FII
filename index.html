@@ -372,6 +372,14 @@
 
   /* TABLE */
   .table-wrap { overflow-x: auto; }
+  #div-fii-table { table-layout: fixed; width: 100%; }
+  #div-fii-table td, #div-fii-table th { padding: 6px 8px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  #div-fii-table td:nth-child(1) { width: 70px; }
+  #div-fii-table td:nth-child(2) { width: 100px; }
+  #div-fii-table td:nth-child(3) { width: 50px; }
+  #div-fii-table td:nth-child(4) { width: 90px; }
+  #div-fii-table td:nth-child(5) { width: auto; }
+  #div-fii-table td:nth-child(6) { width: 80px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th {
     text-align: left;
@@ -1525,69 +1533,67 @@
 
     <!-- DIVIDENDOS -->
     <div class="page" id="page-dividendos">
-      <div class="form-page">
-        <div class="form-section" style="max-width:100%">
+      <!-- Layout: tabela ocupa tela toda, resto scroll abaixo -->
+      <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
 
-          <!-- Cards de resumo -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-            <div class="card">
-              <div class="card-label">Renda Mensal Est.</div>
-              <div class="card-value green" id="div-renda-mensal">R$ 0,00</div>
-              <div class="card-sub">último dividendo × cotas</div>
-            </div>
-            <div class="card">
-              <div class="card-label">Total Acumulado</div>
-              <div class="card-value gold" id="div-total">R$ 0,00</div>
-              <div class="card-sub">histórico registrado</div>
-            </div>
-            <div class="card">
-              <div class="card-label">Proventos</div>
-              <div class="card-value blue" id="div-count">0</div>
-              <div class="card-sub">registros</div>
-            </div>
+        <!-- Cards de resumo — linha fixa no topo -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px 12px 0;flex-shrink:0">
+          <div class="card" style="padding:10px 12px">
+            <div class="card-label" style="font-size:9px">Renda Mensal Est.</div>
+            <div class="card-value green" id="div-renda-mensal" style="font-size:16px">R$ 0,00</div>
           </div>
+          <div class="card" style="padding:10px 12px">
+            <div class="card-label" style="font-size:9px">Total Acumulado</div>
+            <div class="card-value gold" id="div-total" style="font-size:16px">R$ 0,00</div>
+          </div>
+          <div class="card" style="padding:10px 12px">
+            <div class="card-label" style="font-size:9px">Proventos</div>
+            <div class="card-value blue" id="div-count" style="font-size:16px">0</div>
+          </div>
+        </div>
 
-          <!-- Tabela de dividendos por FII (carteira) -->
-          <div class="card" style="margin-bottom:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <!-- Tabela FII — ocupa todo espaço disponível -->
+        <div style="flex:1;min-height:0;padding:8px 12px;display:flex;flex-direction:column">
+          <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;flex-shrink:0;border-bottom:1px solid var(--border)">
               <div class="card-label" style="margin:0">Último Dividendo por FII</div>
               <button class="btn" id="btn-buscar-div" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
                 <span class="div-btn-icon">🔄</span>
                 <span class="div-btn-label">Buscar dividendos</span>
               </button>
             </div>
-            <div class="table-wrap">
-              <table id="div-fii-table">
-                <thead>
+            <div style="flex:1;overflow-y:auto;overflow-x:hidden">
+              <table id="div-fii-table" style="width:100%;table-layout:fixed;border-collapse:collapse">
+                <thead style="position:sticky;top:0;background:var(--surface);z-index:1">
                   <tr>
-                    <th>Ticker</th>
-                    <th>Setor</th>
-                    <th>Cotas</th>
-                    <th>Último Div./cota</th>
-                    <th>Renda Mensal</th>
-                    <th>Yield Mensal</th>
+                    <th style="width:18%;padding:8px;font-size:11px;text-align:left">Ticker</th>
+                    <th style="width:22%;padding:8px;font-size:11px;text-align:left">Setor</th>
+                    <th style="width:10%;padding:8px;font-size:11px;text-align:right">Cotas</th>
+                    <th style="width:18%;padding:8px;font-size:11px;text-align:right">Último Div.</th>
+                    <th style="width:20%;padding:8px;font-size:11px;text-align:right">Renda/mês</th>
+                    <th style="width:12%;padding:8px;font-size:11px;text-align:right">Yield</th>
                   </tr>
                 </thead>
                 <tbody id="div-fii-tbody">
                   <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">
-                    Clique em "Buscar da Brapi" ou adicione dividendos manualmente.
+                    Clique em "Buscar dividendos" para atualizar.
                   </td></tr>
                 </tbody>
               </table>
             </div>
           </div>
+        </div>
 
-          <!-- Gráfico mensal -->
-          <div class="card" style="margin-bottom:16px">
-            <div class="card-label" style="margin-bottom:12px">Renda Mensal (R$)</div>
+        <!-- Gráfico + Histórico — scroll separado abaixo -->
+        <div style="flex-shrink:0;max-height:40vh;overflow-y:auto;padding:0 12px 12px">
+          <div class="card" style="margin-bottom:10px">
+            <div class="card-label" style="margin-bottom:8px">Renda Mensal (R$)</div>
             <div class="chart-container">
               <canvas id="chart-dividendos"></canvas>
             </div>
           </div>
-
-          <!-- Histórico -->
           <div class="card">
-            <div class="card-label" style="margin-bottom:12px">Histórico de Proventos</div>
+            <div class="card-label" style="margin-bottom:8px">Histórico de Proventos</div>
             <div class="div-list" id="div-list">
               <div style="text-align:center;color:var(--text3);padding:24px">
                 Nenhum dividendo registrado ainda.
@@ -1595,8 +1601,8 @@
             </div>
           </div>
 
-        </div>
-      </div>
+        </div><!-- end bottom section -->
+      </div><!-- end page-dividendos flex -->
     </div>
 
     <!-- CHAT -->
