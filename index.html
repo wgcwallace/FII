@@ -3515,15 +3515,12 @@ async function buscarDividendosBrapi() {
     const tickerBusca = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
     let achou = false;
 
-    // Endpoint dedicado de dividendos da Brapi
-    const tentativas = [
-      `https://brapi.dev/api/quote/${tickerBusca}?token=${brapiToken}&dividends=true`,
-      `https://brapi.dev/api/quote/${tickerBusca}.SA?token=${brapiToken}&dividends=true`,
-      `https://brapi.dev/api/quote/${tickerBusca}?token=${brapiToken}&fundamental=true`,
-    ];
+    const tentativas = [tickerBusca, tickerBusca + '.SA'];
 
-    for (const url of tentativas) {
+    for (const sym of tentativas) {
       try {
+        // Usa fundamental=true para obter lastDividendValue e lastDividendDate
+        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=true`;
         const res = await fetch(url, { method: 'GET' });
         if (!res.ok) continue;
         const data = await res.json();
@@ -3531,17 +3528,18 @@ async function buscarDividendosBrapi() {
         const q = data.results?.[0];
         if (!q) continue;
 
-        console.log(`${tickerBusca} dividendsData:`, JSON.stringify(q.dividendsData || {}).slice(0,200));
+        // lastDividendValue vem direto no resultado principal
+        let divValor = q.lastDividendValue || 0;
+        let divData  = q.lastDividendDate  || '';
 
-        // Tenta cashDividends
-        let divValor = 0, divData = '';
-        if (q.dividendsData?.cashDividends?.length) {
+        // Fallback: cashDividends se disponível
+        if (!divValor && q.dividendsData?.cashDividends?.length) {
           const divs = q.dividendsData.cashDividends
-            .filter(d => (d.rate || d.value || d.amount) > 0)
-            .sort((a, b) => new Date(b.paymentDate || b.date || 0) - new Date(a.paymentDate || a.date || 0));
+            .filter(d => (d.rate || 0) > 0)
+            .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
           if (divs[0]) {
-            divValor = divs[0].rate || divs[0].value || divs[0].amount || 0;
-            divData  = divs[0].paymentDate || divs[0].date || '';
+            divValor = divs[0].rate;
+            divData  = divs[0].paymentDate || '';
           }
         }
 
@@ -3564,10 +3562,7 @@ async function buscarDividendosBrapi() {
           achou = true;
           break;
         }
-      } catch(e) {
-        console.error(`Erro ${tickerBusca}:`, e.message);
-        continue;
-      }
+      } catch(e) { continue; }
     }
 
     if (!achou) semDividendo.push(fii.ticker);
@@ -3579,7 +3574,7 @@ async function buscarDividendosBrapi() {
   renderDashboard();
 
   if (semDividendo.length) {
-    notify(`✅ ${atualizados} com dividendo. Sem dados: ${semDividendo.join(', ')}`);
+    notify(`✅ ${atualizados} atualizados. Sem dados: ${semDividendo.join(', ')}`);
   } else {
     notify(`✅ Dividendos de ${atualizados} FIIs atualizados!`);
   }
