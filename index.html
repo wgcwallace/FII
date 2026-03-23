@@ -3312,7 +3312,15 @@ async function buscarCotacoesBrapi() {
     label.textContent = `✓ ${atualizados} atualizados`;
     setTimeout(() => { btn.classList.remove('success'); label.textContent = 'Atualizar cotações'; }, 4000);
 
-    if (naoEncontrados.length) notify(`⚠️ Não encontrados: ${naoEncontrados.join(', ')}`, true);
+    if (naoEncontrados.length) {
+      console.warn('Não encontrados na Brapi:', naoEncontrados);
+      // Mostra aviso apenas se TODOS falharam
+      if (atualizados === 0) {
+        notify(`⚠️ Nenhum FII atualizado. Tickers sem cotação: ${naoEncontrados.join(', ')}`, true);
+      } else {
+        notify(`✅ ${atualizados} atualizados. Sem cotação: ${naoEncontrados.join(', ')}`);
+      }
+    }
     else notify(`✅ ${atualizados} FIIs atualizados com sucesso!`);
 
   } catch (err) {
