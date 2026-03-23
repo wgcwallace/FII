@@ -1491,36 +1491,73 @@
     <div class="page" id="page-dividendos">
       <div class="form-page">
         <div class="form-section" style="max-width:100%">
-          <div class="section-header">
-            <div>
-              <div class="form-title">Dividendos Recebidos</div>
-              <div class="form-subtitle">Histórico de proventos da carteira</div>
-            </div>
-          </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+          <!-- Cards de resumo -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+            <div class="card">
+              <div class="card-label">Renda Mensal Est.</div>
+              <div class="card-value green" id="div-renda-mensal">R$ 0,00</div>
+              <div class="card-sub">último dividendo × cotas</div>
+            </div>
             <div class="card">
               <div class="card-label">Total Acumulado</div>
               <div class="card-value gold" id="div-total">R$ 0,00</div>
+              <div class="card-sub">histórico registrado</div>
             </div>
             <div class="card">
-              <div class="card-label">Proventos Registrados</div>
+              <div class="card-label">Proventos</div>
               <div class="card-value blue" id="div-count">0</div>
+              <div class="card-sub">registros</div>
             </div>
           </div>
 
-          <div class="card" style="margin-bottom:24px">
-            <div class="card-label" style="margin-bottom:16px">Dividendos por Mês</div>
+          <!-- Tabela de dividendos por FII (carteira) -->
+          <div class="card" style="margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div class="card-label" style="margin:0">Último Dividendo por FII</div>
+              <button class="btn" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
+                🔄 Buscar da Brapi
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table id="div-fii-table">
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>Setor</th>
+                    <th>Cotas</th>
+                    <th>Último Div./cota</th>
+                    <th>Renda Mensal</th>
+                    <th>Yield Mensal</th>
+                  </tr>
+                </thead>
+                <tbody id="div-fii-tbody">
+                  <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">
+                    Clique em "Buscar da Brapi" ou adicione dividendos manualmente.
+                  </td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gráfico mensal -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-label" style="margin-bottom:12px">Renda Mensal (R$)</div>
             <div class="chart-container">
               <canvas id="chart-dividendos"></canvas>
             </div>
           </div>
 
-          <div class="div-list" id="div-list">
-            <div style="text-align:center;color:var(--text3);padding:32px">
-              Nenhum dividendo registrado ainda.
+          <!-- Histórico -->
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px">Histórico de Proventos</div>
+            <div class="div-list" id="div-list">
+              <div style="text-align:center;color:var(--text3);padding:24px">
+                Nenhum dividendo registrado ainda.
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -2092,6 +2129,45 @@ function renderCarteira() {
 
 function renderDividendos() {
   const total = dividendos.reduce((a, d) => a + d.total, 0);
+
+  // Renda mensal estimada: último dividendo × cotas de cada FII
+  const rendaMensal = fiis.reduce((s, f) => s + (f.dividendo || 0) * f.cotas, 0);
+  const elRenda = document.getElementById('div-renda-mensal');
+  if (elRenda) elRenda.textContent = 'R$ ' + fmt(rendaMensal);
+
+  // Tabela de último dividendo por FII
+  const tbody = document.getElementById('div-fii-tbody');
+  if (tbody) {
+    if (!fiis.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhum FII na carteira.</td></tr>';
+    } else {
+      const totalRenda = fiis.reduce((s, f) => s + (f.dividendo || 0) * f.cotas, 0);
+      tbody.innerHTML = fiis
+        .slice()
+        .sort((a, b) => (b.dividendo * b.cotas) - (a.dividendo * a.cotas))
+        .map(f => {
+          const rendaFii = (f.dividendo || 0) * f.cotas;
+          const yieldM   = f.atual > 0 ? (f.dividendo / f.atual * 100) : 0;
+          const pctRenda = totalRenda > 0 ? (rendaFii / totalRenda * 100) : 0;
+          const setorKey = (f.setor || '').replace(/\s+/g, '-');
+          return `<tr>
+            <td><strong style="color:var(--accent);font-family:'DM Mono'">${f.ticker}</strong></td>
+            <td><span class="setor-pill setor-${setorKey}">${f.setor}</span></td>
+            <td style="font-family:'DM Mono'">${f.cotas}</td>
+            <td style="font-family:'DM Mono';color:var(--gold)">R$ ${fmt(f.dividendo || 0)}</td>
+            <td>
+              <div style="font-family:'DM Mono';color:var(--accent);font-weight:600">R$ ${fmt(rendaFii)}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">
+                <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px">
+                  <div style="height:3px;width:${Math.min(100,pctRenda).toFixed(1)}%;background:var(--accent);border-radius:2px"></div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-gold">${pct(yieldM)}/mês</span></td>
+          </tr>`;
+        }).join('');
+    }
+  }
   document.getElementById('div-total').textContent = 'R$ ' + fmt(total);
   document.getElementById('div-count').textContent = dividendos.length;
 
@@ -3423,6 +3499,84 @@ function renderSlide2() {
     topEl2.innerHTML = ranked.length ? ranked.slice(0, 5).map((f, i) => makeRow(f, i)).join('') : empty;
     botEl2.innerHTML = ranked.length ? ranked.slice(-5).reverse().map((f, i) => makeRow(f, i)).join('') : empty;
   }
+}
+
+
+// ========== BUSCAR DIVIDENDOS DA BRAPI ==========
+async function buscarDividendosBrapi() {
+  if (!brapiToken) {
+    document.getElementById('brapi-token-input').value = '';
+    document.getElementById('modal-token').classList.add('open');
+    return;
+  }
+  if (fiis.length === 0) { notify('Nenhum FII na carteira.', true); return; }
+
+  notify('🔄 Buscando dividendos...');
+  let atualizados = 0;
+
+  for (let i = 0; i < fiis.length; i++) {
+    const fii = fiis[i];
+    const tickerBusca = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
+    const tentativas = [tickerBusca, tickerBusca + '.SA'];
+
+    for (const sym of tentativas) {
+      try {
+        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false&dividends=true`;
+        const res = await fetch(url, { method: 'GET' });
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        if (data.error) continue;
+
+        const q = data.results?.[0];
+        if (!q) continue;
+
+        // Tenta dividendsData primeiro
+        let divValor = 0;
+        let divData = '';
+
+        if (q.dividendsData?.cashDividends?.length) {
+          const divs = q.dividendsData.cashDividends
+            .filter(d => d.rate > 0)
+            .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
+          if (divs[0]) {
+            divValor = divs[0].rate;
+            divData  = divs[0].paymentDate || '';
+          }
+        }
+
+        // Fallback: usa preço atual sem dividendo (mantém o que tem)
+        if (divValor > 0) {
+          fii.dividendo = parseFloat(divValor.toFixed(4));
+
+          // Registra no histórico se for novo
+          const mesDiv = divData.slice(0, 7);
+          const jaExiste = dividendos.some(d =>
+            d.ticker === fii.ticker && d.data && d.data.startsWith(mesDiv) && mesDiv
+          );
+          if (mesDiv && !jaExiste && fii.cotas > 0) {
+            dividendos.push({
+              ticker: fii.ticker,
+              data: divData || new Date().toISOString().slice(0, 10),
+              valor: divValor,
+              cotas: fii.cotas,
+              total: parseFloat((divValor * fii.cotas).toFixed(2))
+            });
+          }
+          atualizados++;
+          break;
+        }
+      } catch(e) { continue; }
+    }
+
+    // Delay entre chamadas
+    if (i < fiis.length - 1) await new Promise(r => setTimeout(r, 1100));
+  }
+
+  save();
+  renderDividendos();
+  renderDashboard();
+  notify(`✅ Dividendos atualizados: ${atualizados} FIIs`);
 }
 
 // ========== INIT ==========
