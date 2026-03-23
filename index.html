@@ -386,14 +386,9 @@
 
   /* TABLE */
   .table-wrap { overflow-x: auto; }
-  #div-fii-table { table-layout: fixed; width: 100%; }
-  #div-fii-table td, #div-fii-table th { padding: 6px 8px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-  #div-fii-table td:nth-child(1) { width: 70px; }
-  #div-fii-table td:nth-child(2) { width: 100px; }
-  #div-fii-table td:nth-child(3) { width: 50px; }
-  #div-fii-table td:nth-child(4) { width: 90px; }
-  #div-fii-table td:nth-child(5) { width: auto; }
-  #div-fii-table td:nth-child(6) { width: 80px; }
+  #div-fii-table { width: 100%; }
+  #div-fii-table th:nth-child(3),
+  #div-fii-table td:nth-child(3) { text-align: center; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th {
     text-align: left;
@@ -459,29 +454,7 @@
     flex: 1;
   }
 
-  /* Página de dividendos — largura total sem padding lateral */
-  #page-dividendos .form-page {
-    padding: 8px 0 !important;
-  }
-  #page-dividendos > .form-page > div {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-  }
-  #page-dividendos .card {
-    border-radius: 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  #page-dividendos #div-fii-table {
-    width: 100% !important;
-    min-width: unset !important;
-  }
+
 
   .form-section {
     max-width: 640px;
@@ -1571,73 +1544,75 @@
 
     <!-- DIVIDENDOS -->
     <div class="page" id="page-dividendos">
-      <div style="overflow-y:auto;flex:1;padding:8px 0;width:100%;box-sizing:border-box">
+      <div class="dashboard-slide" style="overflow-y:auto">
+        <div class="dashboard-grid" style="margin-bottom:12px">
 
-        <!-- Cards de resumo -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;padding:0 4px">
+          <!-- 3 cards de resumo -->
           <div class="card">
             <div class="card-label">Renda Mensal Est.</div>
-            <div class="card-value green" id="div-renda-mensal">R$ 0,00</div>
-            <div class="card-sub">último dividendo × cotas</div>
+            <div class="card-value green" id="div-renda-mensal" style="font-size:22px">R$ 0,00</div>
+            <div class="card-sub">último div × cotas</div>
           </div>
           <div class="card">
             <div class="card-label">Total Acumulado</div>
-            <div class="card-value gold" id="div-total">R$ 0,00</div>
+            <div class="card-value gold" id="div-total" style="font-size:22px">R$ 0,00</div>
             <div class="card-sub">histórico registrado</div>
           </div>
           <div class="card">
             <div class="card-label">Proventos</div>
-            <div class="card-value blue" id="div-count">0</div>
+            <div class="card-value blue" id="div-count" style="font-size:22px">0</div>
             <div class="card-sub">registros</div>
           </div>
-        </div>
 
-        <!-- Tabela último dividendo por FII -->
-        <div class="card" style="margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div class="card-label" style="margin:0">Último Dividendo por FII</div>
-            <button class="btn" id="btn-buscar-div" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
-              <span class="div-btn-icon">🔄</span>
-              <span class="div-btn-label">Buscar dividendos</span>
-            </button>
-          </div>
-          <!-- Header -->
-          <div style="display:grid;grid-template-columns:1fr 1.2fr 0.7fr 1fr 1fr 0.7fr;gap:4px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase">Ticker</div>
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase">Setor</div>
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;text-align:right">Cotas</div>
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;text-align:right">Último Div.</div>
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;text-align:right">Renda/mês</div>
-            <div style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;text-align:right">Yield</div>
-          </div>
-          <div id="div-fii-tbody">
-            <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">
-              Clique em "Buscar dividendos" para atualizar.
+          <!-- Tabela dividendos — span 3 igual ao Resumo da Carteira -->
+          <div class="card span3">
+            <div class="section-header">
+              <div class="card-label" style="margin:0">Último Dividendo por FII</div>
+              <button class="btn" id="btn-buscar-div" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
+                <span class="div-btn-icon">🔄</span>
+                <span class="div-btn-label">Buscar dividendos</span>
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table id="div-fii-table">
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>Setor</th>
+                    <th>Cotas</th>
+                    <th>Último Div.</th>
+                    <th>Renda/mês</th>
+                    <th>Yield</th>
+                  </tr>
+                </thead>
+                <tbody id="div-fii-tbody">
+                  <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">
+                    Clique em "Buscar dividendos" para atualizar.
+                  </td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
 
-        <!-- Gráfico mensal -->
-        <div class="card-full" style="margin-bottom:1px">
-          <div class="card-label" style="margin-bottom:12px">Renda Mensal (R$)</div>
-          <div class="chart-container">
-            <canvas id="chart-dividendos"></canvas>
-          </div>
-        </div>
-
-        <!-- Histórico -->
-        <div class="card-full">
-          <div class="card-label" style="margin-bottom:12px">Histórico de Proventos</div>
-          <div class="div-list" id="div-list">
-            <div style="text-align:center;color:var(--text3);padding:24px">
-              Nenhum dividendo registrado ainda.
+          <!-- Gráfico mensal — span 3 -->
+          <div class="card span3">
+            <div class="card-label" style="margin-bottom:12px">Renda Mensal (R$)</div>
+            <div class="chart-container">
+              <canvas id="chart-dividendos"></canvas>
             </div>
           </div>
-        </div>
 
+          <!-- Histórico — span 3 -->
+          <div class="card span3">
+            <div class="card-label" style="margin-bottom:12px">Histórico de Proventos</div>
+            <div class="div-list" id="div-list">
+              <div style="text-align:center;color:var(--text3);padding:24px">Nenhum dividendo registrado ainda.</div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
-
     <!-- CHAT -->
     <div class="page" id="page-chat">
       <div class="chat-page">
@@ -2249,7 +2224,7 @@ function renderDividendos() {
   const tbody = document.getElementById('div-fii-tbody');
   if (tbody) {
     if (!fiis.length) {
-      tbody.innerHTML = '<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Nenhum FII na carteira.</div>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhum FII na carteira.</td></tr>';
     } else {
       const totalRenda = fiis.reduce((s, f) => s + (f.dividendo || 0) * f.cotas, 0);
       tbody.innerHTML = fiis
@@ -2269,22 +2244,22 @@ function renderDividendos() {
             const [y, m] = ultReg.data.slice(0,7).split('-');
             divRef = `${meses[parseInt(m)-1]}/${y.slice(2)}`;
           }
-          return `<div style="display:grid;grid-template-columns:1fr 1.2fr 0.7fr 1fr 1fr 0.7fr;gap:4px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center">
-            <div style="font-family:'DM Mono',monospace;font-weight:700;font-size:13px;color:var(--accent)">${f.ticker}</div>
-            <div><span class="setor-pill setor-${setorKey}" style="font-size:10px">${f.setor}</span></div>
-            <div style="font-family:'DM Mono',monospace;font-size:12px;text-align:right;color:var(--text2)">${f.cotas}</div>
-            <div style="text-align:right">
-              <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)">R$ ${fmt(f.dividendo || 0)}</div>
+          return `<tr>
+            <td><strong style="color:var(--accent);font-family:'DM Mono'">${f.ticker}</strong></td>
+            <td><span class="setor-pill setor-${setorKey}">${f.setor}</span></td>
+            <td style="font-family:'DM Mono'">${f.cotas}</td>
+            <td style="font-family:'DM Mono';color:var(--gold)">
+              R$ ${fmt(f.dividendo || 0)}
               ${divRef ? `<div style="font-size:10px;color:var(--text3)">${divRef}</div>` : ''}
-            </div>
-            <div style="text-align:right">
-              <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:600">R$ ${fmt(rendaFii)}</div>
+            </td>
+            <td style="font-family:'DM Mono';color:var(--accent);font-weight:600">
+              R$ ${fmt(rendaFii)}
               <div style="height:2px;background:var(--border);border-radius:2px;margin-top:3px">
                 <div style="height:2px;width:${Math.min(100,pctRenda).toFixed(1)}%;background:var(--accent);border-radius:2px"></div>
               </div>
-            </div>
-            <div style="text-align:right"><span class="badge badge-gold" style="font-size:10px">${pct(yieldM)}</span></div>
-          </div>`;
+            </td>
+            <td><span class="badge badge-gold">${pct(yieldM)}</span></td>
+          </tr>`;
         }).join('');
     }
   }
