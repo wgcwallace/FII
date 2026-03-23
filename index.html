@@ -78,7 +78,7 @@
     z-index: 1;
   }
 
-  /* TOPBAR — duas linhas fixas */
+  /* TOPBAR — altura fixa total para não comprimir o main */
   .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -86,8 +86,8 @@
     flex-direction: column;
     flex-shrink: 0;
     z-index: 10;
-    position: sticky;
-    top: 0;
+    /* Garante que o main sempre ocupe o espaço restante */
+    max-height: 50vh;
   }
 
   /* Linha 1: logo + stats + atualizar */
@@ -229,12 +229,14 @@
   }
   .nav-btn-chat.active::after { display: none; }
 
-  /* MAIN */
+  /* MAIN — ocupa todo espaço abaixo da topbar */
   .main {
     display: flex;
     flex-direction: column;
     overflow: hidden;
     flex: 1;
+    min-height: 0;
+    height: 0; /* força flexbox a calcular altura corretamente */
   }
 
   /* HEADER (hidden — stats moved to topbar) */
@@ -271,7 +273,7 @@
   }
 
   /* PAGES */
-  .page { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+  .page { display: none; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
   .page.active { display: flex; }
 
   /* DASHBOARD — carrossel horizontal */
@@ -1658,11 +1660,20 @@ let charts = {};
 
 // ========== NAVIGATION ==========
 function showPage(id) {
+  console.log('showPage:', id);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const pageEl = document.getElementById('page-' + id);
   if (!pageEl) { console.error('Page not found: page-' + id); return; }
   pageEl.classList.add('active');
+  const cs = getComputedStyle(pageEl);
+  console.log('page activated:', pageEl.id, 
+    'display:', cs.display, 
+    'height:', cs.height,
+    'width:', cs.width,
+    'overflow:', cs.overflow,
+    'offsetHeight:', pageEl.offsetHeight,
+    'scrollHeight:', pageEl.scrollHeight);
   // Highlight matching nav button by onclick attribute
   document.querySelectorAll('.nav-btn').forEach(b => {
     if (b.getAttribute('onclick') === `showPage('${id}')`) b.classList.add('active');
@@ -3372,11 +3383,22 @@ renderDashboard();
 })();
 
 // ========== PWA: SERVICE WORKER (OFFLINE) ==========
-// Service Worker desabilitado — blob: URL não funciona no GitHub Pages
-// Desregistra qualquer SW antigo que possa estar interceptando requisições
+// Limpa Service Workers e caches antigos que possam interceptar navegação
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(reg => reg.unregister());
+    regs.forEach(reg => {
+      reg.unregister();
+      console.log('SW desregistrado:', reg.scope);
+    });
+  });
+}
+// Limpa todos os caches do browser
+if ('caches' in window) {
+  caches.keys().then(keys => {
+    keys.forEach(k => {
+      caches.delete(k);
+      console.log('Cache removido:', k);
+    });
   });
 }
 
