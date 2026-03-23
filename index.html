@@ -3580,16 +3580,6 @@ async function buscarDividendosBrapi() {
   renderDividendos();
   renderDashboard();
 
-  if (atualizados > 0) {
-    notify(semDividendo.length
-      ? `✅ ${atualizados} atualizados. Sem dados: ${semDividendo.join(', ')}`
-      : `✅ Dividendos de ${atualizados} FIIs atualizados!`
-    );
-  } else {
-    notify('⚠️ Não foi possível buscar dividendos. Verifique sua conexão.', true);
-  }
-}
-
 // ========== INIT ==========
 // Auto-classifica FIIs ja cadastrados que estejam como Hibrido e existam na base
 fiis.forEach(f => {
