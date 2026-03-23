@@ -445,6 +445,22 @@
     flex: 1;
   }
 
+  /* Página de dividendos — largura total sem padding lateral */
+  #page-dividendos .form-page {
+    padding: 8px 0 !important;
+  }
+  #page-dividendos .card {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  #page-dividendos #div-fii-table {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
   .form-section {
     max-width: 640px;
     margin-bottom: 24px;
@@ -1533,10 +1549,10 @@
 
     <!-- DIVIDENDOS -->
     <div class="page" id="page-dividendos">
-      <div class="form-page" style="padding:8px 0">
+      <div class="form-page">
 
         <!-- Cards de resumo -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;padding:0 8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;padding:0 4px">
           <div class="card">
             <div class="card-label">Renda Mensal Est.</div>
             <div class="card-value green" id="div-renda-mensal">R$ 0,00</div>
