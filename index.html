@@ -1516,7 +1516,7 @@
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div class="card-label" style="margin:0">Último Dividendo por FII</div>
               <button class="btn" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
-                🔄 Buscar da Brapi
+                🔄 Buscar dividendos
               </button>
             </div>
             <div class="table-wrap">
@@ -3499,11 +3499,6 @@ function renderSlide2() {
 
 // ========== BUSCAR DIVIDENDOS DA BRAPI ==========
 async function buscarDividendosBrapi() {
-  if (!brapiToken) {
-    document.getElementById('brapi-token-input').value = '';
-    document.getElementById('modal-token').classList.add('open');
-    return;
-  }
   if (fiis.length === 0) { notify('Nenhum FII na carteira.', true); return; }
 
   notify('🔄 Buscando dividendos...');
@@ -3512,71 +3507,66 @@ async function buscarDividendosBrapi() {
 
   for (let i = 0; i < fiis.length; i++) {
     const fii = fiis[i];
-    const tickerBusca = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
+    const ticker = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
     let achou = false;
 
-    const tentativas = [tickerBusca, tickerBusca + '.SA'];
+    // Tenta Status Invest via proxy CORS
+    try {
+      const siUrl = `https://statusinvest.com.br/fundos-imobiliarios/${ticker.toLowerCase()}`;
+      const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(siUrl));
+      if (res.ok) {
+        const html = await res.text();
+        const m = html.match(/data-value="([\.\d]+)"[^>]*>[^<]*<\/span>[^<]*Rendimento/i)
+               || html.match(/"dy"[^}]*"actual"\s*:\s*"?([\d.]+)"?/i)
+               || html.match(/Último Rendimento[\s\S]{0,200}?([\d]+[.,][\d]+)/i);
+        if (m) {
+          const val = parseFloat(m[1].replace(',', '.'));
+          if (val > 0) { fii.dividendo = val; atualizados++; achou = true; }
+        }
+      }
+    } catch(e) {}
 
-    for (const sym of tentativas) {
+    // Fallback: Yahoo Finance via proxy
+    if (!achou) {
       try {
-        // modules=defaultKeyStatistics retorna lastDividendValue e lastDividendDate
-        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&modules=defaultKeyStatistics`;
-        const res = await fetch(url, { method: 'GET' });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.error) continue;
-        const q = data.results?.[0];
-        if (!q) continue;
-
-        // lastDividendValue vem direto no resultado principal
-        let divValor = q.lastDividendValue || 0;
-        let divData  = q.lastDividendDate  || '';
-
-        // Fallback: cashDividends se disponível
-        if (!divValor && q.dividendsData?.cashDividends?.length) {
-          const divs = q.dividendsData.cashDividends
-            .filter(d => (d.rate || 0) > 0)
-            .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
-          if (divs[0]) {
-            divValor = divs[0].rate;
-            divData  = divs[0].paymentDate || '';
+        const yhUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.SA?interval=1mo&range=3mo`;
+        const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(yhUrl));
+        if (res.ok) {
+          const data = await res.json();
+          const events = data?.chart?.result?.[0]?.events?.dividends;
+          if (events) {
+            const divs = Object.values(events).sort((a,b) => b.date - a.date);
+            if (divs[0]?.amount > 0) {
+              fii.dividendo = parseFloat(divs[0].amount.toFixed(4));
+              const dt = new Date(divs[0].date * 1000).toISOString().slice(0,10);
+              const mesDiv = dt.slice(0, 7);
+              const jaExiste = mesDiv && dividendos.some(d => d.ticker === fii.ticker && d.data?.startsWith(mesDiv));
+              if (!jaExiste && fii.cotas > 0) {
+                dividendos.push({ ticker: fii.ticker, data: dt, valor: divs[0].amount, cotas: fii.cotas, total: parseFloat((divs[0].amount * fii.cotas).toFixed(2)) });
+              }
+              atualizados++;
+              achou = true;
+            }
           }
         }
-
-        if (divValor > 0) {
-          fii.dividendo = parseFloat(divValor.toFixed(4));
-          const mesDiv = divData.slice(0, 7);
-          const jaExiste = mesDiv && dividendos.some(d =>
-            d.ticker === fii.ticker && d.data?.startsWith(mesDiv)
-          );
-          if (mesDiv && !jaExiste && fii.cotas > 0) {
-            dividendos.push({
-              ticker: fii.ticker,
-              data: divData || new Date().toISOString().slice(0, 10),
-              valor: divValor,
-              cotas: fii.cotas,
-              total: parseFloat((divValor * fii.cotas).toFixed(2))
-            });
-          }
-          atualizados++;
-          achou = true;
-          break;
-        }
-      } catch(e) { continue; }
+      } catch(e) {}
     }
 
     if (!achou) semDividendo.push(fii.ticker);
-    if (i < fiis.length - 1) await new Promise(r => setTimeout(r, 1200));
+    if (i < fiis.length - 1) await new Promise(r => setTimeout(r, 600));
   }
 
   save();
   renderDividendos();
   renderDashboard();
 
-  if (semDividendo.length) {
-    notify(`✅ ${atualizados} atualizados. Sem dados: ${semDividendo.join(', ')}`);
+  if (atualizados > 0) {
+    notify(semDividendo.length
+      ? `✅ ${atualizados} atualizados. Sem dados: ${semDividendo.join(', ')}`
+      : `✅ Dividendos de ${atualizados} FIIs atualizados!`
+    );
   } else {
-    notify(`✅ Dividendos de ${atualizados} FIIs atualizados!`);
+    notify('⚠️ Não foi possível buscar dividendos. Verifique sua conexão.', true);
   }
 }
 
