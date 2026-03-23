@@ -1660,7 +1660,9 @@ let charts = {};
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
+  const pageEl = document.getElementById('page-' + id);
+  if (!pageEl) { console.error('Page not found: page-' + id); return; }
+  pageEl.classList.add('active');
   // Highlight matching nav button by onclick attribute
   document.querySelectorAll('.nav-btn').forEach(b => {
     if (b.getAttribute('onclick') === `showPage('${id}')`) b.classList.add('active');
@@ -1668,10 +1670,13 @@ function showPage(id) {
   // highlight chat strip
   const chatStrip = document.querySelector('.chat-strip-btn');
   if (chatStrip) chatStrip.classList.toggle('active', id === 'chat');
-  const titles = { dashboard: 'Dashboard', carteira: 'Carteira & Formulário', dividendos: 'Dividendos', chat: 'Assistente' };
-  // page-title removed (merged into topbar)
   if (id === 'dashboard') renderDashboard();
   if (id === 'dividendos') renderDividendos();
+  if (id === 'carteira') { renderCarteira(); updateDivSelect(); }
+  // scroll page to top
+  pageEl.scrollTop = 0;
+  const formPage = pageEl.querySelector('.form-page, .dashboard-page');
+  if (formPage) formPage.scrollTop = 0;
 }
 
 // ========== FII CRUD ==========
@@ -3367,27 +3372,12 @@ renderDashboard();
 })();
 
 // ========== PWA: SERVICE WORKER (OFFLINE) ==========
+// Service Worker desabilitado — blob: URL não funciona no GitHub Pages
+// Desregistra qualquer SW antigo que possa estar interceptando requisições
 if ('serviceWorker' in navigator) {
-  const swCode = `
-const CACHE = 'fii-tracker-v1';
-const ASSETS = [self.location.pathname];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match(e.request))));
-});
-  `;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
 }
 
 // ========== PWA: BANNER DE INSTALAÇÃO ==========
