@@ -3550,14 +3550,16 @@ if (isIOS && !isStandalone) {
     </div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:4px">Para atualizar cotações automaticamente, você precisa de um token gratuito da Brapi:</p>
     <div class="token-steps">
-      <div class="token-step"><span>1️⃣</span><span>Acesse <strong>brapi.dev</strong> e clique em <strong>"Começar gratuitamente"</strong></span></div>
-      <div class="token-step"><span>2️⃣</span><span>Crie sua conta (e-mail ou Google)</span></div>
-      <div class="token-step"><span>3️⃣</span><span>No painel, copie seu <strong>Token de acesso</strong></span></div>
-      <div class="token-step"><span>4️⃣</span><span>Cole o token abaixo e clique em Salvar</span></div>
+      <div class="token-step"><span>1️⃣</span><span>Acesse <strong>brapi.dev/dashboard</strong> e faça login</span></div>
+      <div class="token-step"><span>2️⃣</span><span>Vá em <strong>"Chaves de API"</strong></span></div>
+      <div class="token-step"><span>3️⃣</span><span>Se tiver token antigo, <strong>delete-o</strong> e crie um novo</span></div>
+      <div class="token-step"><span>4️⃣</span><span>Clique em <strong>"Criar nova chave"</strong> e copie o token</span></div>
+      <div class="token-step"><span>5️⃣</span><span>Cole o token abaixo e clique em Salvar</span></div>
     </div>
     <div class="form-group" style="margin-bottom:16px">
       <label>Token Brapi</label>
-      <input type="text" id="brapi-token-input" placeholder="Cole seu token aqui..." style="font-family:'DM Mono',monospace">
+      <input type="password" id="brapi-token-input" placeholder="Cole seu token aqui..." style="font-family:'DM Mono',monospace">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace">🔒 Token salvo apenas no seu dispositivo</div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="btn" onclick="document.getElementById('modal-token').classList.remove('open')">Cancelar</button>
