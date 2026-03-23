@@ -3508,46 +3508,48 @@ async function buscarDividendosBrapi() {
 
   notify('🔄 Buscando dividendos...');
   let atualizados = 0;
+  const semDividendo = [];
 
   for (let i = 0; i < fiis.length; i++) {
     const fii = fiis[i];
     const tickerBusca = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
-    const tentativas = [tickerBusca, tickerBusca + '.SA'];
+    let achou = false;
 
-    for (const sym of tentativas) {
+    // Endpoint dedicado de dividendos da Brapi
+    const tentativas = [
+      `https://brapi.dev/api/quote/${tickerBusca}?token=${brapiToken}&dividends=true`,
+      `https://brapi.dev/api/quote/${tickerBusca}.SA?token=${brapiToken}&dividends=true`,
+      `https://brapi.dev/api/quote/${tickerBusca}?token=${brapiToken}&fundamental=true`,
+    ];
+
+    for (const url of tentativas) {
       try {
-        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false&dividends=true`;
         const res = await fetch(url, { method: 'GET' });
         if (!res.ok) continue;
-
         const data = await res.json();
         if (data.error) continue;
-
         const q = data.results?.[0];
         if (!q) continue;
 
-        // Tenta dividendsData primeiro
-        let divValor = 0;
-        let divData = '';
+        console.log(`${tickerBusca} dividendsData:`, JSON.stringify(q.dividendsData || {}).slice(0,200));
 
+        // Tenta cashDividends
+        let divValor = 0, divData = '';
         if (q.dividendsData?.cashDividends?.length) {
           const divs = q.dividendsData.cashDividends
-            .filter(d => d.rate > 0)
-            .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
+            .filter(d => (d.rate || d.value || d.amount) > 0)
+            .sort((a, b) => new Date(b.paymentDate || b.date || 0) - new Date(a.paymentDate || a.date || 0));
           if (divs[0]) {
-            divValor = divs[0].rate;
-            divData  = divs[0].paymentDate || '';
+            divValor = divs[0].rate || divs[0].value || divs[0].amount || 0;
+            divData  = divs[0].paymentDate || divs[0].date || '';
           }
         }
 
-        // Fallback: usa preço atual sem dividendo (mantém o que tem)
         if (divValor > 0) {
           fii.dividendo = parseFloat(divValor.toFixed(4));
-
-          // Registra no histórico se for novo
           const mesDiv = divData.slice(0, 7);
-          const jaExiste = dividendos.some(d =>
-            d.ticker === fii.ticker && d.data && d.data.startsWith(mesDiv) && mesDiv
+          const jaExiste = mesDiv && dividendos.some(d =>
+            d.ticker === fii.ticker && d.data?.startsWith(mesDiv)
           );
           if (mesDiv && !jaExiste && fii.cotas > 0) {
             dividendos.push({
@@ -3559,19 +3561,28 @@ async function buscarDividendosBrapi() {
             });
           }
           atualizados++;
+          achou = true;
           break;
         }
-      } catch(e) { continue; }
+      } catch(e) {
+        console.error(`Erro ${tickerBusca}:`, e.message);
+        continue;
+      }
     }
 
-    // Delay entre chamadas
-    if (i < fiis.length - 1) await new Promise(r => setTimeout(r, 1100));
+    if (!achou) semDividendo.push(fii.ticker);
+    if (i < fiis.length - 1) await new Promise(r => setTimeout(r, 1200));
   }
 
   save();
   renderDividendos();
   renderDashboard();
-  notify(`✅ Dividendos atualizados: ${atualizados} FIIs`);
+
+  if (semDividendo.length) {
+    notify(`✅ ${atualizados} com dividendo. Sem dados: ${semDividendo.join(', ')}`);
+  } else {
+    notify(`✅ Dividendos de ${atualizados} FIIs atualizados!`);
+  }
 }
 
 // ========== INIT ==========
