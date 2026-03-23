@@ -2095,46 +2095,82 @@ function renderDividendos() {
   document.getElementById('div-total').textContent = 'R$ ' + fmt(total);
   document.getElementById('div-count').textContent = dividendos.length;
 
+  // Renda mensal estimada com cotas atuais
+  const rendaMensal = fiis.reduce((s, f) => s + (f.dividendo || 0) * f.cotas, 0);
+  const elRenda = document.getElementById('div-renda-mensal');
+  if (elRenda) elRenda.textContent = 'R$ ' + fmt(rendaMensal);
+
   const list = document.getElementById('div-list');
   if (dividendos.length === 0) {
     list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px">Nenhum dividendo registrado.</div>';
   } else {
-    list.innerHTML = [...dividendos].reverse().map(d =>
-      `<div class="div-item">
-        <div>
-          <div class="div-ticker">${d.ticker}</div>
-          <div class="div-date">${d.data || '—'} · ${d.cotas} cotas</div>
-        </div>
-        <div class="div-value">R$ ${fmt(d.total)}</div>
-      </div>`
-    ).join('');
+    list.innerHTML = [...dividendos]
+      .sort((a,b) => (b.data||'').localeCompare(a.data||''))
+      .map(d =>
+        `<div class="div-item">
+          <div>
+            <div class="div-ticker">${d.ticker}</div>
+            <div class="div-date">${d.data || '—'} · ${d.cotas} cotas · R$ ${fmt(d.valor)}/cota</div>
+          </div>
+          <div class="div-value">R$ ${fmt(d.total)}</div>
+        </div>`
+      ).join('');
   }
 
-  // Chart
+  // Gráfico — agrupa por mês com totais reais (cotas × dividendo do mês)
   const byMonth = {};
   dividendos.forEach(d => {
+    if (!d.data && d.data !== 0) return;
     const key = d.data ? d.data.slice(0, 7) : 'N/A';
-    byMonth[key] = (byMonth[key] || 0) + d.total;
+    if (!byMonth[key]) byMonth[key] = 0;
+    // Usa o total real (cotas × valor/cota registrado)
+    byMonth[key] += parseFloat(d.total) || 0;
   });
+
+  // Garante pelo menos os últimos 6 meses no gráfico
+  const hoje = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    const key = d.toISOString().slice(0, 7);
+    if (!byMonth[key]) byMonth[key] = 0;
+  }
+
   const mLabels = Object.keys(byMonth).sort();
   const mVals = mLabels.map(k => byMonth[k]);
+
+  // Formata labels para mês/ano curto
+  const labelsFormatted = mLabels.map(k => {
+    const [y, m] = k.split('-');
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${meses[parseInt(m)-1]}/${y.slice(2)}`;
+  });
 
   destroyChart('chart-dividendos');
   const ctx = document.getElementById('chart-dividendos').getContext('2d');
   charts['chart-dividendos'] = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: mLabels,
+      labels: labelsFormatted,
       datasets: [{
-        label: 'Dividendos',
+        label: 'Renda (R$)',
         data: mVals,
-        backgroundColor: 'rgba(245,200,66,0.3)',
-        borderColor: '#f5c842',
+        backgroundColor: mVals.map(v => v > 0 ? 'rgba(245,200,66,0.4)' : 'rgba(56,56,56,0.3)'),
+        borderColor: mVals.map(v => v > 0 ? '#f5c842' : '#383838'),
         borderWidth: 1,
         borderRadius: 6,
       }]
     },
-    options: { ...chartOpts(), plugins: { legend: { display: false } } }
+    options: {
+      ...chartOpts(),
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `R$ ${fmt(ctx.parsed.y)}`
+          }
+        }
+      }
+    }
   });
 }
 
@@ -3142,14 +3178,17 @@ async function buscarCotacoesBrapi() {
   try {
     for (let i = 0; i < todos.length; i++) {
       const ticker = todos[i];
+      // Normaliza tickers de subscrição (ex: XPML12 → XPML11, KNHY15 → KNHY11)
+      // Cotas de subscrição não têm cotação na Brapi — busca o ticker principal
+      const tickerBusca = ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
       label.textContent = `Buscando ${i + 1}/${total}...`;
 
       // Tenta com e sem sufixo .SA
-      const tentativas = [ticker, ticker + '.SA'];
+      const tentativas = [tickerBusca, tickerBusca + '.SA'];
       let achou = false;
 
       for (const sym of tentativas) {
-        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false`;
+        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false&dividends=true`;
 
         let res;
         try {
@@ -3184,9 +3223,28 @@ async function buscarCotacoesBrapi() {
           const fii = fiis.find(f => f.ticker === ticker);
           if (fii) {
             fii.atual = parseFloat(q.regularMarketPrice.toFixed(2));
+            // Busca último dividendo pago (cashDividends ordenado por data desc)
             if (q.dividendsData?.cashDividends?.length) {
-              const ult = q.dividendsData.cashDividends[0];
-              if (ult?.rate > 0) fii.dividendo = parseFloat(ult.rate.toFixed(4));
+              // Filtra apenas dividendos do tipo Rendimento/JCP e pega o mais recente
+              const divs = q.dividendsData.cashDividends
+                .filter(d => d.rate > 0)
+                .sort((a, b) => new Date(b.paymentDate || b.declarationDate || 0) - new Date(a.paymentDate || a.declarationDate || 0));
+              if (divs.length > 0) {
+                const ultDiv = divs[0];
+                fii.dividendo = parseFloat(ultDiv.rate.toFixed(4));
+                // Registra automaticamente no histórico se for novo
+                const mesDiv = (ultDiv.paymentDate || '').slice(0, 7);
+                const jaExiste = dividendos.some(d => d.ticker === ticker && d.data && d.data.startsWith(mesDiv) && mesDiv);
+                if (mesDiv && !jaExiste && fii.cotas > 0) {
+                  dividendos.push({
+                    ticker,
+                    data: ultDiv.paymentDate || new Date().toISOString().slice(0, 10),
+                    valor: ultDiv.rate,
+                    cotas: fii.cotas,
+                    total: parseFloat((ultDiv.rate * fii.cotas).toFixed(2))
+                  });
+                }
+              }
             }
             atualizados++;
             achou = true;
@@ -3204,6 +3262,7 @@ async function buscarCotacoesBrapi() {
     save();
     renderDashboard();
     renderCarteira();
+    renderDividendos();
 
     const agora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     document.getElementById('upd-time').textContent = `Atualizado às ${agora}`;
