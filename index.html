@@ -3223,7 +3223,7 @@ async function buscarCotacoesBrapi() {
       let achou = false;
 
       for (const sym of tentativas) {
-        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false&dividends=true`;
+        const url = `https://brapi.dev/api/quote/${sym}?token=${brapiToken}&fundamental=false`;
 
         let res;
         try {
@@ -3245,8 +3245,10 @@ async function buscarCotacoesBrapi() {
         if (res.status === 404) continue;
 
         if (!res.ok) {
-          const body = await res.text();
-          // Erro em um ticker não para tudo — registra e continua
+          let body = '';
+          try { body = await res.text(); } catch(e) {}
+          console.error(`Brapi error for ${sym}: ${res.status} ${body.slice(0,200)}`);
+          if (res.status === 401 || res.status === 403) throw new Error('TOKEN_INVALIDO');
           naoEncontrados.push(ticker);
           break;
         }
