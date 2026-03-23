@@ -338,6 +338,20 @@
     transition: border-color 0.2s;
   }
 
+  /* Card de largura total — sem bordas ou raio lateral */
+  .card-full {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 14px 0;
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .card:hover { border-color: var(--text3); }
 
   .card-label {
@@ -1557,7 +1571,7 @@
 
     <!-- DIVIDENDOS -->
     <div class="page" id="page-dividendos">
-      <div class="form-page">
+      <div style="overflow-y:auto;flex:1;padding:8px 0;width:100%;box-sizing:border-box">
 
         <!-- Cards de resumo -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;padding:0 4px">
@@ -1579,7 +1593,7 @@
         </div>
 
         <!-- Tabela último dividendo por FII -->
-        <div class="card" style="margin-bottom:8px;border-radius:0;border-left:none;border-right:none">
+        <div class="card-full" style="margin-bottom:1px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div class="card-label" style="margin:0">Último Dividendo por FII</div>
             <button class="btn" id="btn-buscar-div" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
@@ -1587,15 +1601,15 @@
               <span class="div-btn-label">Buscar dividendos</span>
             </button>
           </div>
-          <table id="div-fii-table" style="width:100%;table-layout:fixed;border-collapse:collapse">
+          <table id="div-fii-table" style="width:100%;table-layout:fixed;border-collapse:collapse;margin:0">
             <thead>
               <tr>
-                <th style="width:18%;padding:8px;font-size:11px;text-align:left">Ticker</th>
-                <th style="width:22%;padding:8px;font-size:11px;text-align:left">Setor</th>
-                <th style="width:10%;padding:8px;font-size:11px;text-align:right">Cotas</th>
-                <th style="width:18%;padding:8px;font-size:11px;text-align:right">Último Div.</th>
-                <th style="width:20%;padding:8px;font-size:11px;text-align:right">Renda/mês</th>
-                <th style="width:12%;padding:8px;font-size:11px;text-align:right">Yield</th>
+                <th style="width:13%;padding:6px 4px;font-size:11px;text-align:left">Ticker</th>
+                <th style="width:22%;padding:6px 4px;font-size:11px;text-align:left">Setor</th>
+                <th style="width:9%;padding:6px 4px;font-size:11px;text-align:right">Cotas</th>
+                <th style="width:20%;padding:6px 4px;font-size:11px;text-align:right">Último Div.</th>
+                <th style="width:22%;padding:6px 4px;font-size:11px;text-align:right">Renda/mês</th>
+                <th style="width:14%;padding:6px 4px;font-size:11px;text-align:right">Yield</th>
               </tr>
             </thead>
             <tbody id="div-fii-tbody">
@@ -1607,7 +1621,7 @@
         </div>
 
         <!-- Gráfico mensal -->
-        <div class="card" style="margin-bottom:16px">
+        <div class="card-full" style="margin-bottom:1px">
           <div class="card-label" style="margin-bottom:12px">Renda Mensal (R$)</div>
           <div class="chart-container">
             <canvas id="chart-dividendos"></canvas>
@@ -1615,7 +1629,7 @@
         </div>
 
         <!-- Histórico -->
-        <div class="card">
+        <div class="card-full">
           <div class="card-label" style="margin-bottom:12px">Histórico de Proventos</div>
           <div class="div-list" id="div-list">
             <div style="text-align:center;color:var(--text3);padding:24px">
