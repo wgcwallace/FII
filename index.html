@@ -2148,11 +2148,24 @@ function renderDividendos() {
           const yieldM   = f.atual > 0 ? (f.dividendo / f.atual * 100) : 0;
           const pctRenda = totalRenda > 0 ? (rendaFii / totalRenda * 100) : 0;
           const setorKey = (f.setor || '').replace(/\s+/g, '-');
+          // Busca data do último dividendo no histórico
+          const ultReg = dividendos
+            .filter(d => d.ticker === f.ticker && d.data)
+            .sort((a,b) => b.data.localeCompare(a.data))[0];
+          const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          let divRef = '';
+          if (ultReg?.data) {
+            const [y, m] = ultReg.data.slice(0,7).split('-');
+            divRef = `${meses[parseInt(m)-1]}/${y.slice(2)}`;
+          }
           return `<tr>
             <td><strong style="color:var(--accent);font-family:'DM Mono'">${f.ticker}</strong></td>
             <td><span class="setor-pill setor-${setorKey}">${f.setor}</span></td>
             <td style="font-family:'DM Mono'">${f.cotas}</td>
-            <td style="font-family:'DM Mono';color:var(--gold)">R$ ${fmt(f.dividendo || 0)}</td>
+            <td style="font-family:'DM Mono';color:var(--gold)">
+              R$ ${fmt(f.dividendo || 0)}
+              ${divRef ? `<div style="font-size:10px;color:var(--text3);margin-top:1px">${divRef}</div>` : ''}
+            </td>
             <td>
               <div style="font-family:'DM Mono';color:var(--accent);font-weight:600">R$ ${fmt(rendaFii)}</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">
