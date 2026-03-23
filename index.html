@@ -2130,11 +2130,6 @@ function renderCarteira() {
 function renderDividendos() {
   const total = dividendos.reduce((a, d) => a + d.total, 0);
 
-  // Renda mensal estimada: último dividendo × cotas de cada FII
-  const rendaMensal = fiis.reduce((s, f) => s + (f.dividendo || 0) * f.cotas, 0);
-  const elRenda = document.getElementById('div-renda-mensal');
-  if (elRenda) elRenda.textContent = 'R$ ' + fmt(rendaMensal);
-
   // Tabela de último dividendo por FII
   const tbody = document.getElementById('div-fii-tbody');
   if (tbody) {
