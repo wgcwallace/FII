@@ -3504,85 +3504,87 @@ function renderSlide2() {
 async function buscarDividendosBrapi() {
   if (fiis.length === 0) { notify('Nenhum FII na carteira.', true); return; }
 
-  // Ativa animação no botão
-  const btnDiv = document.getElementById('btn-buscar-div');
+  const btnDiv  = document.getElementById('btn-buscar-div');
   const iconDiv = btnDiv?.querySelector('.div-btn-icon');
   const labelDiv = btnDiv?.querySelector('.div-btn-label');
   if (btnDiv) { btnDiv.disabled = true; iconDiv?.classList.add('spinning'); if(labelDiv) labelDiv.textContent = 'Buscando...'; }
 
-  notify('🔄 Buscando dividendos...');
+  notify('🔄 Buscando dividendos de todos os FIIs...');
+
+  const hoje = new Date().toISOString().slice(0, 10);
   let atualizados = 0;
   const semDividendo = [];
-  const hoje = new Date().toISOString().slice(0, 10);
 
-  // Processa em lotes de 5 tickers para não sobrecarregar
-  const tickers = fiis.map(f => ({
-    fii: f,
-    ticker: f.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111')
-  }));
+  // Busca todos em paralelo (sem delay)
+  const proxies = [
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+    'https://api.codetabs.com/v1/proxy?quest='
+  ];
 
-  for (let i = 0; i < tickers.length; i++) {
-    const { fii, ticker } = tickers[i];
-    let achou = false;
-
-    // Tenta múltiplos proxies CORS gratuitos
-    const proxies = [
-      'https://api.allorigins.win/raw?url=',
-      'https://corsproxy.io/?',
-      'https://api.codetabs.com/v1/proxy?quest='
-    ];
-
+  async function fetchComProxy(url) {
     for (const proxy of proxies) {
-      if (achou) break;
       try {
-        // HG Brasil tem API gratuita específica para FIIs brasileiros
-        const url = `https://api.hgbrasil.com/finance/stock_price?key=demo&symbol=${ticker}`;
-        const res = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) continue;
-        const data = await res.json();
-        const stock = data?.results?.[ticker] || data?.results?.[ticker + '.SA'];
-        if (stock?.dividends) {
-          const divs = Object.values(stock.dividends).sort((a,b) => new Date(b.date_payment) - new Date(a.date_payment));
-          if (divs[0]?.amount > 0) {
-            fii.dividendo = parseFloat(divs[0].amount.toFixed(4));
-            const mesDiv = (divs[0].date_payment || hoje).slice(0, 7);
-            const jaExiste = dividendos.some(d => d.ticker === fii.ticker && d.data?.startsWith(mesDiv));
-            if (!jaExiste && fii.cotas > 0) {
-              dividendos.push({ ticker: fii.ticker, data: divs[0].date_payment || hoje, valor: fii.dividendo, cotas: fii.cotas, total: parseFloat((fii.dividendo * fii.cotas).toFixed(2)) });
-            }
-            atualizados++; achou = true; break;
-          }
-        }
+        const res = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(8000) });
+        if (res.ok) return await res.json();
       } catch(e) {}
-
-      // Fallback: Yahoo Finance
-      if (!achou) {
-        try {
-          const yhUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.SA?range=3mo&interval=1mo&events=div`;
-          const res = await fetch(proxy + encodeURIComponent(yhUrl), { signal: AbortSignal.timeout(5000) });
-          if (!res.ok) continue;
-          const data = await res.json();
-          const events = data?.chart?.result?.[0]?.events?.dividends;
-          if (events) {
-            const divs = Object.values(events).sort((a,b) => b.date - a.date);
-            if (divs[0]?.amount > 0) {
-              fii.dividendo = parseFloat(divs[0].amount.toFixed(4));
-              const dt = new Date(divs[0].date * 1000).toISOString().slice(0, 10);
-              const mesDiv = dt.slice(0, 7);
-              const jaExiste = dividendos.some(d => d.ticker === fii.ticker && d.data?.startsWith(mesDiv));
-              if (!jaExiste && fii.cotas > 0) {
-                dividendos.push({ ticker: fii.ticker, data: dt, valor: fii.dividendo, cotas: fii.cotas, total: parseFloat((fii.dividendo * fii.cotas).toFixed(2)) });
-              }
-              atualizados++; achou = true; break;
-            }
-          }
-        } catch(e) {}
-      }
     }
-
-    if (!achou) semDividendo.push(fii.ticker);
-    if (i < tickers.length - 1) await new Promise(r => setTimeout(r, 500));
+    return null;
   }
+
+  async function buscarUm(fii) {
+    const ticker = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
+
+    // Tenta Yahoo Finance — mais estável
+    try {
+      const data = await fetchComProxy(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.SA?range=6mo&interval=1mo&events=div`
+      );
+      const events = data?.chart?.result?.[0]?.events?.dividends;
+      if (events) {
+        const divs = Object.values(events).sort((a,b) => b.date - a.date);
+        if (divs[0]?.amount > 0) {
+          fii.dividendo = parseFloat(divs[0].amount.toFixed(4));
+          const dt = new Date(divs[0].date * 1000).toISOString().slice(0, 10);
+          const mesDiv = dt.slice(0, 7);
+          const jaExiste = dividendos.some(d => d.ticker === fii.ticker && d.data?.startsWith(mesDiv));
+          if (!jaExiste && fii.cotas > 0) {
+            dividendos.push({ ticker: fii.ticker, data: dt, valor: fii.dividendo, cotas: fii.cotas, total: parseFloat((fii.dividendo * fii.cotas).toFixed(2)) });
+          }
+          return true;
+        }
+      }
+    } catch(e) {}
+
+    // Fallback HG Brasil
+    try {
+      const data = await fetchComProxy(
+        `https://api.hgbrasil.com/finance/stock_price?key=demo&symbol=${ticker}`
+      );
+      const stock = data?.results?.[ticker] || data?.results?.[ticker + '.SA'];
+      if (stock?.dividends) {
+        const divs = Object.values(stock.dividends).sort((a,b) => new Date(b.date_payment) - new Date(a.date_payment));
+        if (divs[0]?.amount > 0) {
+          fii.dividendo = parseFloat(divs[0].amount.toFixed(4));
+          const mesDiv = (divs[0].date_payment || hoje).slice(0, 7);
+          const jaExiste = dividendos.some(d => d.ticker === fii.ticker && d.data?.startsWith(mesDiv));
+          if (!jaExiste && fii.cotas > 0) {
+            dividendos.push({ ticker: fii.ticker, data: divs[0].date_payment || hoje, valor: fii.dividendo, cotas: fii.cotas, total: parseFloat((fii.dividendo * fii.cotas).toFixed(2)) });
+          }
+          return true;
+        }
+      }
+    } catch(e) {}
+
+    return false;
+  }
+
+  // Executa todos em paralelo
+  const resultados = await Promise.all(fiis.map(fii => buscarUm(fii)));
+  resultados.forEach((ok, i) => {
+    if (ok) atualizados++;
+    else semDividendo.push(fiis[i].ticker);
+  });
 
   // Restaura botão
   if (btnDiv) { btnDiv.disabled = false; iconDiv?.classList.remove('spinning'); if(labelDiv) labelDiv.textContent = 'Buscar dividendos'; }
@@ -3594,7 +3596,7 @@ async function buscarDividendosBrapi() {
   if (atualizados > 0) {
     notify(semDividendo.length
       ? `✅ ${atualizados} com dividendo. Sem dados: ${semDividendo.join(', ')}`
-      : `✅ Dividendos de ${atualizados} FIIs atualizados!`
+      : `✅ Dividendos de todos os ${atualizados} FIIs atualizados!`
     );
   } else {
     notify('⚠️ Nenhuma fonte retornou dividendos. Tente novamente.', true);
