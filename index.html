@@ -3576,11 +3576,13 @@ async function buscarDividendosBrapi() {
       }
     } catch(e) {}
 
-    return false;
+    return false; // nunca lança exceção — sempre retorna true/false
   }
 
-  // Executa todos em paralelo
-  const resultados = await Promise.all(fiis.map(fii => buscarUm(fii)));
+  // Executa todos em paralelo — cada um independente, nunca interrompe os outros
+  const resultados = await Promise.all(fiis.map(fii =>
+    buscarUm(fii).catch(() => false)
+  ));
   resultados.forEach((ok, i) => {
     if (ok) atualizados++;
     else semDividendo.push(fiis[i].ticker);
