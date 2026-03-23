@@ -69,12 +69,12 @@
   }
 
   /* LAYOUT */
-  /* APP — coluna única, topbar + conteúdo */
+  /* APP */
   .app {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    position: relative;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
     z-index: 1;
   }
 
@@ -232,9 +232,10 @@
   .main {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     flex: 1;
+    overflow: hidden;
     min-height: 0;
+    position: relative;
   }
 
   /* HEADER (hidden — stats moved to topbar) */
@@ -271,8 +272,17 @@
   }
 
   /* PAGES */
-  .page { display: none; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
-  .page.active { display: flex; }
+  .page {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .page.active {
+    display: flex;
+  }
 
   /* DASHBOARD — carrossel horizontal */
   .dashboard-page {
