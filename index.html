@@ -1087,6 +1087,8 @@
   .update-btn.success { border-color: var(--accent); color: var(--accent); }
   .update-btn.error { border-color: var(--red); color: var(--red); }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .div-btn-icon { display:inline-block; }
+  .div-btn-icon.spinning { animation: spin 0.8s linear infinite; }
   .upd-time { font-size: 9px; color: var(--text3); font-family: 'DM Mono', monospace; text-align:center; }
 
   /* TOKEN MODAL */
@@ -1515,8 +1517,9 @@
           <div class="card" style="margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div class="card-label" style="margin:0">Último Dividendo por FII</div>
-              <button class="btn" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
-                🔄 Buscar dividendos
+              <button class="btn" id="btn-buscar-div" style="font-size:11px;padding:4px 10px" onclick="buscarDividendosBrapi()">
+                <span class="div-btn-icon">🔄</span>
+                <span class="div-btn-label">Buscar dividendos</span>
               </button>
             </div>
             <div class="table-wrap">
@@ -3501,6 +3504,12 @@ function renderSlide2() {
 async function buscarDividendosBrapi() {
   if (fiis.length === 0) { notify('Nenhum FII na carteira.', true); return; }
 
+  // Ativa animação no botão
+  const btnDiv = document.getElementById('btn-buscar-div');
+  const iconDiv = btnDiv?.querySelector('.div-btn-icon');
+  const labelDiv = btnDiv?.querySelector('.div-btn-label');
+  if (btnDiv) { btnDiv.disabled = true; iconDiv?.classList.add('spinning'); if(labelDiv) labelDiv.textContent = 'Buscando...'; }
+
   notify('🔄 Buscando dividendos...');
   let atualizados = 0;
   const semDividendo = [];
@@ -3574,6 +3583,9 @@ async function buscarDividendosBrapi() {
     if (!achou) semDividendo.push(fii.ticker);
     if (i < tickers.length - 1) await new Promise(r => setTimeout(r, 500));
   }
+
+  // Restaura botão
+  if (btnDiv) { btnDiv.disabled = false; iconDiv?.classList.remove('spinning'); if(labelDiv) labelDiv.textContent = 'Buscar dividendos'; }
 
   save();
   renderDividendos();
