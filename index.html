@@ -3532,8 +3532,16 @@ async function buscarDividendosBrapi() {
     return null;
   }
 
+  // Mapeamento de tickers renomeados/incorporados
+  const tickerMap = {
+    'MALL11': 'PMLL11',  // Genial Malls → Patria Malls (jul/2025)
+    'SDIL11': 'TRBL11',  // SDI Logística → Tribuá Logística
+    'BCFF11': 'BTHF11',  // BCF II → BTG Pactual Hedge Fund
+  };
+
   async function buscarUm(fii) {
-    const ticker = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
+    const tickerNorm = fii.ticker.replace(/([A-Z]{4})(1[2-9]|[2-9][0-9])$/, '$111');
+    const ticker = tickerMap[tickerNorm] || tickerNorm;
 
     // Tenta Yahoo Finance — mais estável
     try {
