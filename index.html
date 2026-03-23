@@ -3253,40 +3253,44 @@ async function buscarCotacoesBrapi() {
           break;
         }
 
-        const data = await res.json();
-        const q = data.results?.[0];
+        let data;
+        try { data = await res.json(); } catch(e) { naoEncontrados.push(ticker); break; }
+        console.log(`Brapi ${sym}: status=${res.status} error=${data.error} price=${data.results?.[0]?.regularMarketPrice}`);
 
-        if (q && q.regularMarketPrice > 0) {
-          const fii = fiis.find(f => f.ticker === ticker);
-          if (fii) {
+        // Se API retornou erro explícito no body — tenta próxima variante
+        if (data.error) continue;
+
+        const q = data.results?.[0];
+        if (!q) { naoEncontrados.push(ticker); break; }
+
+        const fii = fiis.find(f => f.ticker === ticker);
+        if (fii) {
+          if (q.regularMarketPrice > 0) {
             fii.atual = parseFloat(q.regularMarketPrice.toFixed(2));
-            // Busca último dividendo pago (cashDividends ordenado por data desc)
-            if (q.dividendsData?.cashDividends?.length) {
-              // Filtra apenas dividendos do tipo Rendimento/JCP e pega o mais recente
-              const divs = q.dividendsData.cashDividends
-                .filter(d => d.rate > 0)
-                .sort((a, b) => new Date(b.paymentDate || b.declarationDate || 0) - new Date(a.paymentDate || a.declarationDate || 0));
-              if (divs.length > 0) {
-                const ultDiv = divs[0];
-                fii.dividendo = parseFloat(ultDiv.rate.toFixed(4));
-                // Registra automaticamente no histórico se for novo
-                const mesDiv = (ultDiv.paymentDate || '').slice(0, 7);
-                const jaExiste = dividendos.some(d => d.ticker === ticker && d.data && d.data.startsWith(mesDiv) && mesDiv);
-                if (mesDiv && !jaExiste && fii.cotas > 0) {
-                  dividendos.push({
-                    ticker,
-                    data: ultDiv.paymentDate || new Date().toISOString().slice(0, 10),
-                    valor: ultDiv.rate,
-                    cotas: fii.cotas,
-                    total: parseFloat((ultDiv.rate * fii.cotas).toFixed(2))
-                  });
-                }
+          }
+          if (q.dividendsData?.cashDividends?.length) {
+            const divs = q.dividendsData.cashDividends
+              .filter(d => d.rate > 0)
+              .sort((a, b) => new Date(b.paymentDate || b.declarationDate || 0) - new Date(a.paymentDate || a.declarationDate || 0));
+            if (divs.length > 0) {
+              const ultDiv = divs[0];
+              fii.dividendo = parseFloat(ultDiv.rate.toFixed(4));
+              const mesDiv = (ultDiv.paymentDate || '').slice(0, 7);
+              const jaExiste = dividendos.some(d => d.ticker === ticker && d.data && d.data.startsWith(mesDiv) && mesDiv);
+              if (mesDiv && !jaExiste && fii.cotas > 0) {
+                dividendos.push({
+                  ticker,
+                  data: ultDiv.paymentDate || new Date().toISOString().slice(0, 10),
+                  valor: ultDiv.rate,
+                  cotas: fii.cotas,
+                  total: parseFloat((ultDiv.rate * fii.cotas).toFixed(2))
+                });
               }
             }
-            atualizados++;
-            achou = true;
-            break; // encontrou — não precisa tentar .SA
           }
+          atualizados++;
+          achou = true;
+          break;
         }
       }
 
