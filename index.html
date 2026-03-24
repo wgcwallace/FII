@@ -2055,7 +2055,7 @@ function renderDashboard() {
         legend: {
           position: 'bottom',
           labels: {
-            color: getComputedStyle(document.documentElement).getPropertyValue('--text2').trim() || '#9a9a9a',
+            color: '#9a9a9a',
             font: { family: 'DM Mono', size: 11 },
             padding: 8,
             generateLabels: chart => {
@@ -2064,9 +2064,10 @@ function renderDashboard() {
                 const val = data.datasets[0].data[i];
                 const pct = setorTotal > 0 ? (val / setorTotal * 100).toFixed(1) : 0;
                 return {
-                  text: `${label} ${pct}%`,
+                  text: `${label}  ${pct}%`,
                   fillStyle: data.datasets[0].backgroundColor[i],
-                  strokeStyle: data.datasets[0].borderColor,
+                  strokeStyle: '#242424',
+                  fontColor: '#9a9a9a',
                   lineWidth: 1,
                   hidden: false,
                   index: i
