@@ -2037,6 +2037,7 @@ function renderDashboard() {
   const colors = ['#00e87a','#3fa6ff','#f5c842','#ff4d6d','#a78bfa','#fb923c','#34d399','#60a5fa'];
   destroyChart('chart-setor');
   const ctx2 = document.getElementById('chart-setor').getContext('2d');
+  const setorTotal = Object.values(setores).reduce((a,b) => a+b, 0);
   charts['chart-setor'] = new Chart(ctx2, {
     type: 'doughnut',
     data: {
@@ -2051,7 +2052,38 @@ function renderDashboard() {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#9a9a9a', font: { family: 'DM Mono', size: 11 }, padding: 8 } }
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text2').trim() || '#9a9a9a',
+            font: { family: 'DM Mono', size: 11 },
+            padding: 8,
+            generateLabels: chart => {
+              const data = chart.data;
+              return data.labels.map((label, i) => {
+                const val = data.datasets[0].data[i];
+                const pct = setorTotal > 0 ? (val / setorTotal * 100).toFixed(1) : 0;
+                return {
+                  text: `${label} ${pct}%`,
+                  fillStyle: data.datasets[0].backgroundColor[i],
+                  strokeStyle: data.datasets[0].borderColor,
+                  lineWidth: 1,
+                  hidden: false,
+                  index: i
+                };
+              });
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const val = ctx.parsed;
+              const pct = setorTotal > 0 ? (val / setorTotal * 100).toFixed(1) : 0;
+              return ` ${pct}% — R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+            }
+          }
+        }
       }
     }
   });
